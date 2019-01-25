@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/Library/Frameworks/Python.framework/Versions/3.7/bin/python3
 #/usr/local/bin/python3
 # Set the path to your python3 above
 
