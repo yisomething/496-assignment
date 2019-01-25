@@ -8,7 +8,7 @@ Implements a basic Go board with functions to:
 
 The board uses a 1-dimensional representation with padding
 """
-
+import re
 import numpy as np
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, \
                        PASS, is_black_white, coord_to_point, where1d, MAXSIZE
@@ -58,7 +58,7 @@ class SimpleGoBoard(object):
         self.current_player = BLACK
         self.maxpoint = size * size + 3 * (size + 1)
         self.board = np.full(self.maxpoint, BORDER, dtype = np.int32)
-        self._initialize_empty_points(self.board) 
+        self._initialize_empty_points(self.board)
 
     def copy(self):
         b = SimpleGoBoard(self.size)
@@ -74,7 +74,7 @@ class SimpleGoBoard(object):
         assert row >= 1
         assert row <= self.size
         return row * self.NS + 1
-        
+
     def _initialize_empty_points(self, board):
         """
         Fills points on the board with EMPTY
@@ -102,7 +102,7 @@ class SimpleGoBoard(object):
             elif self.board[d] == opp_color:
                 false_count += 1
         return false_count <= 1 - at_edge # 0 at edge, 1 in center
-    
+
     def _is_surrounded(self, point, color):
         """
         check whether empty point is surrounded by stones of color.
@@ -128,7 +128,7 @@ class SimpleGoBoard(object):
         """
         Find the block of given stone
         Returns a board of boolean markers which are set for
-        all the points in the block 
+        all the points in the block
         """
         marker = np.full(self.maxpoint, False, dtype = bool)
         pointstack = [stone]
@@ -151,7 +151,7 @@ class SimpleGoBoard(object):
         Returns True iff only a single tone was captured.
         This is used in play_move to check for possible ko
         """
-        single_capture = None 
+        single_capture = None
         opp_block = self._block_of(nb_point)
         if not self._has_liberty(opp_block):
             captures = list(where1d(opp_block))
@@ -167,33 +167,10 @@ class SimpleGoBoard(object):
         """
         assert is_black_white(color)
         # Special cases
-        if point == PASS:
-            self.ko_recapture = None
-            self.current_player = GoBoardUtil.opponent(color)
-            return True
-        elif self.board[point] != EMPTY:
+        if self.board[point] != EMPTY:
             return False
-        if point == self.ko_recapture:
-            return False
-            
-        # General case: deal with captures, suicide, and next ko point
-        oppColor = GoBoardUtil.opponent(color)
-        in_enemy_eye = self._is_surrounded(point, oppColor)
+
         self.board[point] = color
-        single_captures = []
-        neighbors = self._neighbors(point)
-        for nb in neighbors:
-            if self.board[nb] == oppColor:
-                single_capture = self._detect_and_process_capture(nb)
-                if single_capture != None:
-                    single_captures.append(single_capture)
-        block = self._block_of(point)
-        if not self._has_liberty(block): # undo suicide move
-            self.board[point] = EMPTY
-            return False
-        self.ko_recapture = None
-        if in_enemy_eye and len(single_captures) == 1:
-            self.ko_recapture = single_captures[0]
         self.current_player = GoBoardUtil.opponent(color)
         return True
 
@@ -204,14 +181,14 @@ class SimpleGoBoard(object):
             if self.get_color(nb) == color:
                 nbc.append(nb)
         return nbc
-        
+
     def _neighbors(self, point):
         """ List of all four neighbors of the point """
         return [point - 1, point + 1, point - self.NS, point + self.NS]
 
     def _diag_neighbors(self, point):
         """ List of all four diagonal neighbors of point """
-        return [point - self.NS - 1, 
-                point - self.NS + 1, 
-                point + self.NS - 1, 
+        return [point - self.NS - 1,
+                point - self.NS + 1,
+                point + self.NS - 1,
                 point + self.NS + 1]

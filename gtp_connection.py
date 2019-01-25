@@ -2,10 +2,11 @@
 gtp_connection.py
 Module for playing games of Go using GoTextProtocol
 
-Parts of this code were originally based on the gtp module 
-in the Deep-Go project by Isaac Henrion and Amos Storkey 
+Parts of this code were originally based on the gtp module
+in the Deep-Go project by Isaac Henrion and Amos Storkey
 at the University of Edinburgh.
 """
+import re
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
@@ -22,7 +23,7 @@ class GtpConnection():
         ----------
         go_engine:
             a program that can reply to a set of GTP commandsbelow
-        board: 
+        board:
             Represents the current board state.
         """
         self._debug_mode = debug_mode
@@ -52,7 +53,7 @@ class GtpConnection():
         }
 
         # used for argument checking
-        # values: (required number of arguments, 
+        # values: (required number of arguments,
         #          error message on argnum failure)
         self.argmap = {
             "boardsize": (1, 'Usage: boardsize INT'),
@@ -64,14 +65,14 @@ class GtpConnection():
         }
 
     def write(self, data):
-        stdout.write(data) 
+        stdout.write(data)
 
     def flush(self):
         stdout.flush()
 
     def start_connection(self):
         """
-        Start a GTP connection. 
+        Start a GTP connection.
         This function continuously monitors standard input for commands.
         """
         line = stdin.readline()
@@ -144,7 +145,7 @@ class GtpConnection():
 
     def board2d(self):
         return str(GoBoardUtil.get_twoD_board(self.board))
-        
+
     def protocol_version_cmd(self, args):
         """ Return the GTP protocol version being used (always 2) """
         self.respond('2')
@@ -200,8 +201,21 @@ class GtpConnection():
 
     def gogui_rules_legal_moves_cmd(self, args):
         """ Implement this function for Assignment 1 """
-        self.respond()
-        return
+        '''
+        if end_game:
+            self.respond()
+
+        else:
+            board_color = args[0].lower()
+            color = color_to_int(board_color)
+            moves = GoBoardUtil.generate_legal_moves(self.board, color)
+            gtp_moves = []
+            for move in moves:
+                coords = point_to_coord(point)
+                gtp_moves.append(format_point(coords))
+            sorted_moves = ' '.join(sorted(gtp_moves))
+            self.respond(sorted_moves)
+        '''
 
     def gogui_rules_side_to_move_cmd(self, args):
         """ We already implemented this function for Assignment 1 """
@@ -227,7 +241,7 @@ class GtpConnection():
                     assert False
             str += '\n'
         self.respond(str)
-            
+
     def gogui_rules_final_result_cmd(self, args):
         """ Implement this function for Assignment 1 """
         self.respond("unknown")
@@ -238,27 +252,27 @@ class GtpConnection():
         play a move args[1] for given color args[0] in {'b','w'}
         """
         try:
-            board_color = args[0].lower()
-            board_move = args[1]
-            color = color_to_int(board_color)
-            if args[1].lower() == 'pass':
-                self.board.play_move(PASS, color)
-                self.board.current_player = GoBoardUtil.opponent(color)
-                self.respond()
+            # check color
+            if args[0].lower() not in ['b','w']:
+                self.respond("illegal move: \"{}\" wrong color".format(args[0].lower()))
                 return
-            coord = move_to_coord(args[1], self.board.size)
-            if coord:
+            board_color = args[0].lower()
+            color = color_to_int(board_color)
+
+            # check coordinate
+            board_move = args[1]
+            if  move_to_coord(args[1], self.board.size):
+                coord = move_to_coord(args[1], self.board.size)
                 move = coord_to_point(coord[0],coord[1], self.board.size)
             else:
-                self.error("Error executing move {} converted from {}"
-                           .format(move, args[1]))
+                self.respond("illegal move: \"{}\" wrong coordinate".format(args[1].lower()))
                 return
+
             if not self.board.play_move(move, color):
-                self.respond("Illegal Move: {}".format(board_move))
+                self.respond("illegal move: \"{}\" occupied".format(board_move.lower()))
                 return
             else:
-                self.debug_msg("Move: {}\nBoard:\n{}\n".
-                                format(board_move, self.board2d()))
+                self.debug_msg("Move: {}\nBoard:\n{}\n".format(board_move, self.board2d()))
             self.respond()
         except Exception as e:
             self.respond('Error: {}'.format(str(e)))
@@ -306,7 +320,7 @@ class GtpConnection():
         """ list all supported GTP commands """
         self.respond(' '.join(list(self.commands.keys())))
 
-    """ Assignment 1: ignore this command, implement 
+    """ Assignment 1: ignore this command, implement
         gogui_rules_legal_moves_cmd  above instead """
     def legal_moves_cmd(self, args):
         """
@@ -325,7 +339,7 @@ class GtpConnection():
 
 def point_to_coord(point, boardsize):
     """
-    Transform point given as board array index 
+    Transform point given as board array index
     to (row, col) coordinate representation.
     Special case: PASS is not transformed
     """
@@ -345,8 +359,8 @@ def format_point(move):
     row, col = move
     if not 0 <= row < MAXSIZE or not 0 <= col < MAXSIZE:
         raise ValueError
-    return column_letters[col - 1]+ str(row) 
-    
+    return column_letters[col - 1]+ str(row)
+
 def move_to_coord(point_str, board_size):
     """
     Convert a string point_str representing a point, as specified by GTP,
@@ -361,21 +375,21 @@ def move_to_coord(point_str, board_size):
     try:
         col_c = s[0]
         if (not "a" <= col_c <= "z") or col_c == "i":
-            raise ValueError
+            return False
         col = ord(col_c) - ord("a")
         if col_c < "i":
             col += 1
         row = int(s[1:])
         if row < 1:
-            raise ValueError
-    except (IndexError, ValueError):
-        raise ValueError("invalid point: '{}'".format(s))
+            return False
+    except (IndexError):
+        return False
     if not (col <= board_size and row <= board_size):
-        raise ValueError("point off board: '{}'".format(s))
+        return False
     return row, col
 
 def color_to_int(c):
     """convert character to the appropriate integer code"""
-    color_to_int = {"b": BLACK , "w": WHITE, "e": EMPTY, 
+    color_to_int = {"b": BLACK , "w": WHITE, "e": EMPTY,
                     "BORDER": BORDER}
-    return color_to_int[c] 
+    return color_to_int[c]
