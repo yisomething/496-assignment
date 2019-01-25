@@ -204,8 +204,8 @@ class GtpConnection():
     def gogui_rules_legal_moves_cmd(self, args):
         """ Implement this function for Assignment 1 """
 
-        if self.end_game():
-            self.respond(" ")
+        if self.end_game() == True:
+            self.respond(' '.join(sorted([])))
 
         else:
             moves = self.board.get_empty_points()
@@ -215,6 +215,7 @@ class GtpConnection():
                 gtp_moves.append(format_point(coords))
             sorted_moves = ' '.join(sorted(gtp_moves))
             self.respond(sorted_moves)
+
 
     def gogui_rules_side_to_move_cmd(self, args):
         """ We already implemented this function for Assignment 1 """
