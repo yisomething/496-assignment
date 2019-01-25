@@ -29,6 +29,7 @@ class GtpConnection():
         self._debug_mode = debug_mode
         self.go_engine = go_engine
         self.board = board
+        self.place = None
         self.commands = {
             "protocol_version": self.protocol_version_cmd,
             "quit": self.quit_cmd,
@@ -142,6 +143,7 @@ class GtpConnection():
         Reset the board to empty board of given size
         """
         self.board.reset(size)
+        self.place = None
 
     def board2d(self):
         return str(GoBoardUtil.get_twoD_board(self.board))
@@ -201,21 +203,18 @@ class GtpConnection():
 
     def gogui_rules_legal_moves_cmd(self, args):
         """ Implement this function for Assignment 1 """
-        '''
-        if end_game:
-            self.respond()
+
+        if self.end_game():
+            self.respond(" ")
 
         else:
-            board_color = args[0].lower()
-            color = color_to_int(board_color)
-            moves = GoBoardUtil.generate_legal_moves(self.board, color)
+            moves = self.board.get_empty_points()
             gtp_moves = []
             for move in moves:
-                coords = point_to_coord(point)
+                coords = point_to_coord(move,self.board.size)
                 gtp_moves.append(format_point(coords))
             sorted_moves = ' '.join(sorted(gtp_moves))
             self.respond(sorted_moves)
-        '''
 
     def gogui_rules_side_to_move_cmd(self, args):
         """ We already implemented this function for Assignment 1 """
@@ -242,9 +241,43 @@ class GtpConnection():
             str += '\n'
         self.respond(str)
 
+    def move_to_point(self,move):
+        size = self.board.size
+        coord = move_to_coord(move, size)
+        point = coord_to_point(coord[0],coord[1],size)
+        return point
+
+    def count(self,point,neighbor_pt,step):
+        if self.board.get_color(point) != self.board.get_color(neighbor_pt):
+            return 0
+        else:
+            return 1 + self.count(point,neighbor_pt + step,step)
+
+
+    def end_game(self):
+        if self.place != None:
+            point = self.move_to_point(self.place)
+            for step in [1,self.board.NS,self.board.NS-1,self.board.NS+1]:
+                total = self.count(point,point+step,step) + self.count(point,point-step,-step)
+                if total>=4:
+                    return True
+        return False
+
+
     def gogui_rules_final_result_cmd(self, args):
         """ Implement this function for Assignment 1 """
-        self.respond("unknown")
+        if self.end_game():
+            point = self.move_to_point(self.place)
+            if self.board.get_color(point)==1:
+                self.respond("black")
+            elif self.board.get_color(point)==2:
+                self.respond("white")
+
+        elif len(self.board.get_empty_points())==0:
+            self.respond("draw")
+
+        else:
+            self.respond("unknown")
 
     def play_cmd(self, args):
         """ Modify this function for Assignment 1 """
@@ -272,6 +305,7 @@ class GtpConnection():
                 self.respond("illegal move: \"{}\" occupied".format(board_move.lower()))
                 return
             else:
+                self.place = args[1]
                 self.debug_msg("Move: {}\nBoard:\n{}\n".format(board_move, self.board2d()))
             self.respond()
         except Exception as e:
@@ -282,14 +316,21 @@ class GtpConnection():
         """ generate a move for color args[0] in {'b','w'} """
         board_color = args[0].lower()
         color = color_to_int(board_color)
-        move = self.go_engine.get_move(self.board, color)
-        move_coord = point_to_coord(move, self.board.size)
-        move_as_string = format_point(move_coord)
-        if self.board.is_legal(move, color):
-            self.board.play_move(move, color)
-            self.respond(move_as_string)
-        else:
-            self.respond("Illegal move: {}".format(move_as_string))
+        empty_points = self.board.get_empty_points()
+
+        if len(empty_points)> 0 and self.end_game()==False:
+            my_move = np.random.choice(empty_points)
+            move_coord = point_to_coord(my_move, self.board.size)
+            move_as_string = format_point(move_coord)
+            if self.board.is_legal(my_move, color):
+                self.board.play_move(my_move, color)
+                self.respond(move_as_string)
+            else:
+                self.respond("Illegal move: {}".format(move_as_string))
+        elif len(empty_points)==0:
+            self.respond("pass")
+        elif self.end_game():
+            self.respond("resign")
 
     """
     ==========================================================================
