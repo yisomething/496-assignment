@@ -202,7 +202,10 @@ class GtpConnection():
         self.respond(str(self.board.size))
 
     def gogui_rules_legal_moves_cmd(self, args):
-        """ Implement this function for Assignment 1 """
+        """
+        Implement this function for Assignment 1
+        return empty list if game ends. else return a list of all empty points    
+        """
 
         if self.end_game() == True:
             self.respond(' '.join(sorted([])))
@@ -243,12 +246,15 @@ class GtpConnection():
         self.respond(str)
 
     def move_to_point(self,move):
+        """ covert the last move to coordinate """
         size = self.board.size
         coord = move_to_coord(move, size)
         point = coord_to_point(coord[0],coord[1],size)
         return point
 
     def count(self,point,neighbor_pt,step):
+        """ based on the last move,
+            using recursion to count the number of consistent points """
         if self.board.get_color(point) != self.board.get_color(neighbor_pt):
             return 0
         else:
@@ -256,6 +262,11 @@ class GtpConnection():
 
 
     def end_game(self):
+        """
+        check the consistent color in the horizontal and diagnal axis;
+        if the num of consistent color is larger than 4
+        then last move + 4 = 5， game ends
+        """
         if self.place != None:
             point = self.move_to_point(self.place)
             for step in [1,self.board.NS,self.board.NS-1,self.board.NS+1]:
