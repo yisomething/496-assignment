@@ -14,7 +14,7 @@ play b a4
 #?[black]
 
 play b c5
-#?[illegal move: "c5"]
+#?[illegal move: "c5" game ends]
 
 20 gogui-rules_legal_moves
 #?[]
@@ -32,7 +32,7 @@ play w c3
 play w d4
 play w e5
 play w f6
-#?[illegal move: "f6"]
+#?[illegal move: "f6" game ends]
 
 gogui-rules_final_result
 #?[white]
@@ -76,7 +76,7 @@ play b b3
 play b b4
 play w a5
 play b b5
-#?[illegal move: "b5"]
+#?[illegal move: "b5" game ends]
 
 gogui-rules_final_result
 #?[white]
