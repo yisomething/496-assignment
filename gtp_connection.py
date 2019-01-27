@@ -204,20 +204,20 @@ class GtpConnection():
     def gogui_rules_legal_moves_cmd(self, args):
         """
         Implement this function for Assignment 1
-        return empty list if game ends. else return a list of all empty points    
+        return empty list if game ends. else return a list of all empty points
         """
-
-        if self.end_game() == True:
-            self.respond(' '.join(sorted([])))
-
+        if self.end_game():
+            self.respond(' '.join([]))
         else:
             moves = self.board.get_empty_points()
             gtp_moves = []
             for move in moves:
                 coords = point_to_coord(move,self.board.size)
                 gtp_moves.append(format_point(coords))
-            sorted_moves = ' '.join(sorted(gtp_moves))
+            sorted_moves = ' '.join(sorted(gtp_moves,key=lambda x:(x[0],int(x[1:]))))
             self.respond(sorted_moves)
+
+
 
 
     def gogui_rules_side_to_move_cmd(self, args):
@@ -313,12 +313,15 @@ class GtpConnection():
                 self.respond("illegal move: \"{}\" wrong coordinate".format(args[1].lower()))
                 return
 
-            if not self.board.play_move(move, color):
+            if self.end_game():
+                self.respond("illegal move: \"{}\" game ends".format(board_move.lower()))
+                return
+            elif self.board.play_move(move, color):
+                self.place = args[1]
+            else:
                 self.respond("illegal move: \"{}\" occupied".format(board_move.lower()))
                 return
-            else:
-                self.place = args[1]
-                self.debug_msg("Move: {}\nBoard:\n{}\n".format(board_move, self.board2d()))
+
             self.respond()
         except Exception as e:
             self.respond('Error: {}'.format(str(e)))
