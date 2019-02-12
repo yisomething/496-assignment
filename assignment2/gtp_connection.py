@@ -10,6 +10,7 @@ import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
                        MAXSIZE, coord_to_point
+import datetime
 import numpy as np
 import re
 
@@ -49,7 +50,9 @@ class GtpConnection():
             "gogui-rules_side_to_move": self.gogui_rules_side_to_move_cmd,
             "gogui-rules_board": self.gogui_rules_board_cmd,
             "gogui-rules_final_result": self.gogui_rules_final_result_cmd,
-            "gogui-analyze_commands": self.gogui_analyze_cmd
+            "gogui-analyze_commands": self.gogui_analyze_cmd,
+            "timelimit" : self.timelimit_cmd,
+            "solve" : self.solve_cmd,
         }
 
         # used for argument checking
@@ -167,6 +170,36 @@ class GtpConnection():
         """ clear the board """
         self.reset(self.board.size)
         self.respond()
+    
+    def timelimit_cmd(self,args):
+        if int(args[0])<1 or int(args[0])>100:
+            return "wrong time"
+        else:
+            self.go_engine.time = int(args[0])
+        self.respond()
+
+    def solve_cmd(self,args):
+        result  = self.go_engine.solve(self.board)
+        if not result:
+            self.respond("unknown")
+            return
+        if result[0] == 0:
+            winner = None
+        elif result[0] == 1:
+            winner = self.board.current_player
+        else:
+            winner = GoBoardUtil.opponent(self.board.current_player)
+        if winner == BLACK:
+            respond =  "b"
+        elif winner == WHITE:
+            respond = "w"
+        else:
+            respond =  "draw"
+        if result[1]:
+            respond += " " + format_point(point_to_coord(result[1],self.board.size))
+        self.respond(respond)
+
+        
 
     def boardsize_cmd(self, args):
         """
